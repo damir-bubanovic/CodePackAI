@@ -41,11 +41,17 @@ def main() -> None:
     zip_name = f"{project_path.name}_{profile_name}.zip"
     output_zip_path = str(project_path.parent / zip_name)
 
+    include_review = input("Include review files (images/assets)? (y/n): ").strip().lower()
+
+    allowed = {"include"}
+    if include_review == "y":
+        allowed.add("review")
+
     files_added, total_bytes = create_zip_from_results(
         project_folder=project_folder,
         results=results,
         output_zip_path=output_zip_path,
-        allowed_classifications={"include"},
+        allowed_classifications=allowed,
     )
 
     print("\n=== ZIP CREATED ===")
