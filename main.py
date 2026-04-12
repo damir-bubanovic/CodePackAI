@@ -1,7 +1,10 @@
+from pathlib import Path
+
 from database import initialize_database
 from seed_data import seed_profiles, seed_rules
 from profile_service import get_rules_for_profile
 from scanner import scan_project, summarize_results
+from packer import create_zip_from_results
 
 
 def main() -> None:
@@ -21,14 +24,6 @@ def main() -> None:
     results = scan_project(project_folder, rules)
     summary = summarize_results(results)
 
-    print("\n=== SCAN RESULTS ===")
-    for item in results[:50]:
-        print(
-            f"{item['classification']:10} | "
-            f"{item['size_bytes']:8} bytes | "
-            f"{item['relative_path']}"
-        )
-
     print("\n=== SUMMARY ===")
     for classification, data in summary.items():
         print(
@@ -37,24 +32,26 @@ def main() -> None:
             f"size: {data['size_bytes']:10} bytes"
         )
 
-    unmatched = [item for item in results if item["classification"] == "unmatched"]
-    review = [item for item in results if item["classification"] == "review"]
+    create_zip = input("\nCreate zip with included files only? (y/n): ").strip().lower()
+    if create_zip != "y":
+        print("Zip creation skipped.")
+        return
 
-    print("\n=== FIRST 30 UNMATCHED FILES ===")
-    for item in unmatched[:30]:
-        print(
-            f"{item['size_bytes']:8} bytes | "
-            f"{item['relative_path']}"
-        )
+    project_path = Path(project_folder).resolve()
+    zip_name = f"{project_path.name}_{profile_name}.zip"
+    output_zip_path = str(project_path.parent / zip_name)
 
-    print("\n=== FIRST 30 REVIEW FILES ===")
-    for item in review[:30]:
-        print(
-            f"{item['size_bytes']:8} bytes | "
-            f"{item['relative_path']}"
-        )
+    files_added, total_bytes = create_zip_from_results(
+        project_folder=project_folder,
+        results=results,
+        output_zip_path=output_zip_path,
+        allowed_classifications={"include"},
+    )
 
-    print(f"\nTotal files scanned: {len(results)}")
+    print("\n=== ZIP CREATED ===")
+    print(f"Output: {output_zip_path}")
+    print(f"Files added: {files_added}")
+    print(f"Total uncompressed bytes packed: {total_bytes}")
 
 
 if __name__ == "__main__":
