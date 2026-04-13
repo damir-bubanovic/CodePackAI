@@ -16,6 +16,7 @@ class CodePackAIWindow:
         self.project_folder_var = tk.StringVar()
         self.profile_var = tk.StringVar()
         self.include_review_var = tk.BooleanVar(value=False)
+        self.max_size_var = tk.StringVar()
 
         self.last_results = None
         self.last_project_folder = None
@@ -48,26 +49,32 @@ class CodePackAIWindow:
             text="Include review files (images/assets)",
             variable=self.include_review_var
         )
-        include_review_check.grid(row=4, column=0, sticky="w", pady=(14, 10))
+        include_review_check.grid(row=4, column=0, sticky="w", pady=(14, 6))
+
+        size_label = ttk.Label(main_frame, text="Max file size (KB, optional):")
+        size_label.grid(row=5, column=0, sticky="w", pady=(6, 2))
+
+        size_entry = ttk.Entry(main_frame, textvariable=self.max_size_var, width=20)
+        size_entry.grid(row=6, column=0, sticky="w", pady=(0, 10))
 
         scan_button = ttk.Button(main_frame, text="Scan", command=self._scan)
-        scan_button.grid(row=5, column=0, sticky="w", pady=(0, 6))
+        scan_button.grid(row=7, column=0, sticky="w", pady=(0, 6))
 
         pack_button = ttk.Button(main_frame, text="Pack", command=self._pack)
-        pack_button.grid(row=5, column=1, sticky="w", pady=(0, 6))
+        pack_button.grid(row=7, column=1, sticky="w", pady=(0, 6))
 
         result_label = ttk.Label(main_frame, text="Results:")
-        result_label.grid(row=6, column=0, sticky="w", pady=(8, 6))
+        result_label.grid(row=8, column=0, sticky="w", pady=(8, 6))
 
         self.result_text = tk.Text(main_frame, height=20, wrap="word")
-        self.result_text.grid(row=7, column=0, columnspan=2, sticky="nsew")
+        self.result_text.grid(row=9, column=0, columnspan=2, sticky="nsew")
 
         scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=self.result_text.yview)
-        scrollbar.grid(row=7, column=2, sticky="ns")
+        scrollbar.grid(row=9, column=2, sticky="ns")
         self.result_text.configure(yscrollcommand=scrollbar.set)
 
         main_frame.columnconfigure(0, weight=1)
-        main_frame.rowconfigure(7, weight=1)
+        main_frame.rowconfigure(9, weight=1)
 
     def _load_profiles(self) -> None:
         profiles = get_all_profiles()
@@ -110,6 +117,18 @@ class CodePackAIWindow:
         self.last_project_folder = project_folder
         self.last_profile = profile_name
 
+        included_files = sorted(
+            [r for r in results if r["classification"] == "include"],
+            key=lambda x: x["size_bytes"],
+            reverse=True
+        )
+
+        review_files = sorted(
+            [r for r in results if r["classification"] == "review"],
+            key=lambda x: x["size_bytes"],
+            reverse=True
+        )
+
         result_lines = [
             "Scan Results",
             "",
@@ -124,6 +143,18 @@ class CodePackAIWindow:
                 f"  {classification}: files={data['count']}, size={data['size_bytes']} bytes"
             )
 
+        result_lines.append("")
+        result_lines.append("Top Included Files:")
+
+        for item in included_files[:20]:
+            result_lines.append(f"  {item['relative_path']} ({item['size_bytes'] / 1024:.1f} KB)")
+
+        result_lines.append("")
+        result_lines.append("Top Review Files:")
+
+        for item in review_files[:20]:
+            result_lines.append(f"  {item['relative_path']} ({item['size_bytes'] / 1024:.1f} KB)")
+
         self._write_result("\n".join(result_lines))
 
     def _pack(self) -> None:
@@ -133,6 +164,16 @@ class CodePackAIWindow:
 
         include_review = self.include_review_var.get()
 
+        max_size_kb = self.max_size_var.get().strip()
+        max_size_bytes = None
+
+        if max_size_kb:
+            try:
+                max_size_bytes = int(max_size_kb) * 1024
+            except ValueError:
+                messagebox.showerror("Error", "Max file size must be a number.")
+                return
+
         allowed = {"include"}
         if include_review:
             allowed.add("review")
@@ -141,9 +182,28 @@ class CodePackAIWindow:
         zip_name = f"{project_path.name}_{self.last_profile}.zip"
         output_zip_path = str(project_path.parent / zip_name)
 
+        filtered_results = self.last_results
+        skipped_large_files = []
+
+        if max_size_bytes is not None:
+            filtered_results = []
+            skipped_large_files = []
+
+            for r in self.last_results:
+                if r["size_bytes"] <= max_size_bytes:
+                    filtered_results.append(r)
+                else:
+                    skipped_large_files.append(r)
+
+        skipped_large_files = sorted(
+            skipped_large_files,
+            key=lambda x: x["size_bytes"],
+            reverse=True
+        )
+
         files_added, total_bytes = create_zip_from_results(
             project_folder=self.last_project_folder,
-            results=self.last_results,
+            results=filtered_results,
             output_zip_path=output_zip_path,
             allowed_classifications=allowed,
         )
@@ -156,12 +216,22 @@ class CodePackAIWindow:
             "Pack Results",
             "",
             f"Include review files: {'Yes' if include_review else 'No'}",
+            f"Max file size filter: {max_size_kb + ' KB' if max_size_kb else 'None'}",
             "",
             f"Zip path: {output_zip_path}",
             f"Files added: {files_added}",
             f"Total uncompressed bytes: {total_bytes}",
             f"Zip file size: {zip_size_bytes} bytes",
         ]
+
+        if skipped_large_files:
+            result_lines.append("")
+            result_lines.append("Skipped (too large files):")
+
+            for item in skipped_large_files[:20]:
+                result_lines.append(
+                    f"  {item['relative_path']} ({item['size_bytes'] / 1024:.1f} KB)"
+                )
 
         self._write_result("\n".join(result_lines))
 
