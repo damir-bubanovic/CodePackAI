@@ -11,12 +11,14 @@ class CodePackAIWindow:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
         self.root.title("CodePackAI")
-        self.root.geometry("760x520")
+        self.root.geometry("820x620")
 
         self.project_folder_var = tk.StringVar()
+        self.output_folder_var = tk.StringVar()
         self.profile_var = tk.StringVar()
         self.include_review_var = tk.BooleanVar(value=False)
         self.max_size_var = tk.StringVar()
+        self.size_review_only_var = tk.BooleanVar(value=True)
 
         self.last_results = None
         self.last_project_folder = None
@@ -25,6 +27,7 @@ class CodePackAIWindow:
         self._build_ui()
         self._load_profiles()
 
+
     def _build_ui(self) -> None:
         main_frame = ttk.Frame(self.root, padding=12)
         main_frame.pack(fill="both", expand=True)
@@ -32,49 +35,66 @@ class CodePackAIWindow:
         folder_label = ttk.Label(main_frame, text="Project folder:")
         folder_label.grid(row=0, column=0, sticky="w", pady=(0, 6))
 
-        folder_entry = ttk.Entry(main_frame, textvariable=self.project_folder_var, width=70)
+        folder_entry = ttk.Entry(main_frame, textvariable=self.project_folder_var, width=80)
         folder_entry.grid(row=1, column=0, sticky="ew", padx=(0, 8))
 
-        browse_button = ttk.Button(main_frame, text="Browse...", command=self._browse_folder)
-        browse_button.grid(row=1, column=1, sticky="ew")
+        browse_project_button = ttk.Button(main_frame, text="Browse...", command=self._browse_project_folder)
+        browse_project_button.grid(row=1, column=1, sticky="ew")
+
+        output_label = ttk.Label(main_frame, text="Output folder:")
+        output_label.grid(row=2, column=0, sticky="w", pady=(14, 6))
+
+        output_entry = ttk.Entry(main_frame, textvariable=self.output_folder_var, width=80)
+        output_entry.grid(row=3, column=0, sticky="ew", padx=(0, 8))
+
+        browse_output_button = ttk.Button(main_frame, text="Browse...", command=self._browse_output_folder)
+        browse_output_button.grid(row=3, column=1, sticky="ew")
 
         profile_label = ttk.Label(main_frame, text="Profile:")
-        profile_label.grid(row=2, column=0, sticky="w", pady=(14, 6))
+        profile_label.grid(row=4, column=0, sticky="w", pady=(14, 6))
 
         self.profile_combo = ttk.Combobox(main_frame, textvariable=self.profile_var, state="readonly")
-        self.profile_combo.grid(row=3, column=0, sticky="ew", padx=(0, 8))
+        self.profile_combo.grid(row=5, column=0, sticky="ew", padx=(0, 8))
 
         include_review_check = ttk.Checkbutton(
             main_frame,
             text="Include review files (images/assets)",
             variable=self.include_review_var
         )
-        include_review_check.grid(row=4, column=0, sticky="w", pady=(14, 6))
+        include_review_check.grid(row=6, column=0, sticky="w", pady=(14, 6))
 
         size_label = ttk.Label(main_frame, text="Max file size (KB, optional):")
-        size_label.grid(row=5, column=0, sticky="w", pady=(6, 2))
+        size_label.grid(row=7, column=0, sticky="w", pady=(6, 2))
 
         size_entry = ttk.Entry(main_frame, textvariable=self.max_size_var, width=20)
-        size_entry.grid(row=6, column=0, sticky="w", pady=(0, 10))
+        size_entry.grid(row=8, column=0, sticky="w", pady=(0, 6))
+
+        size_mode_check = ttk.Checkbutton(
+            main_frame,
+            text="Apply size limit only to review files",
+            variable=self.size_review_only_var
+        )
+        size_mode_check.grid(row=9, column=0, sticky="w", pady=(0, 10))
 
         scan_button = ttk.Button(main_frame, text="Scan", command=self._scan)
-        scan_button.grid(row=7, column=0, sticky="w", pady=(0, 6))
+        scan_button.grid(row=10, column=0, sticky="w", pady=(0, 6))
 
         pack_button = ttk.Button(main_frame, text="Pack", command=self._pack)
-        pack_button.grid(row=7, column=1, sticky="w", pady=(0, 6))
+        pack_button.grid(row=10, column=1, sticky="w", pady=(0, 6))
 
         result_label = ttk.Label(main_frame, text="Results:")
-        result_label.grid(row=8, column=0, sticky="w", pady=(8, 6))
+        result_label.grid(row=11, column=0, sticky="w", pady=(8, 6))
 
         self.result_text = tk.Text(main_frame, height=20, wrap="word")
-        self.result_text.grid(row=9, column=0, columnspan=2, sticky="nsew")
+        self.result_text.grid(row=12, column=0, columnspan=2, sticky="nsew")
 
         scrollbar = ttk.Scrollbar(main_frame, orient="vertical", command=self.result_text.yview)
-        scrollbar.grid(row=9, column=2, sticky="ns")
+        scrollbar.grid(row=12, column=2, sticky="ns")
         self.result_text.configure(yscrollcommand=scrollbar.set)
 
         main_frame.columnconfigure(0, weight=1)
-        main_frame.rowconfigure(9, weight=1)
+        main_frame.rowconfigure(12, weight=1)
+
 
     def _load_profiles(self) -> None:
         profiles = get_all_profiles()
@@ -84,10 +104,17 @@ class CodePackAIWindow:
         if profile_names:
             self.profile_var.set("Python" if "Python" in profile_names else profile_names[0])
 
-    def _browse_folder(self) -> None:
-        selected_folder = filedialog.askdirectory()
+    def _browse_project_folder(self) -> None:
+        initial_dir = self.project_folder_var.get().strip() or str(Path.home())
+        selected_folder = filedialog.askdirectory(initialdir=initial_dir)
         if selected_folder:
             self.project_folder_var.set(selected_folder)
+
+    def _browse_output_folder(self) -> None:
+        initial_dir = self.output_folder_var.get().strip() or str(Path.home())
+        selected_folder = filedialog.askdirectory(initialdir=initial_dir)
+        if selected_folder:
+            self.output_folder_var.set(selected_folder)
 
     def _write_result(self, text: str) -> None:
         self.result_text.delete("1.0", tk.END)
@@ -163,6 +190,7 @@ class CodePackAIWindow:
             return
 
         include_review = self.include_review_var.get()
+        size_review_only = self.size_review_only_var.get()
 
         max_size_kb = self.max_size_var.get().strip()
         max_size_bytes = None
@@ -178,18 +206,42 @@ class CodePackAIWindow:
         if include_review:
             allowed.add("review")
 
+        output_folder = self.output_folder_var.get().strip()
+        if not output_folder:
+            output_folder = str(Path(self.last_project_folder).resolve().parent)
+
+        output_folder_path = Path(output_folder).resolve()
+        if not output_folder_path.exists():
+            messagebox.showerror("Error", "Selected output folder does not exist.")
+            return
+
         project_path = Path(self.last_project_folder).resolve()
         zip_name = f"{project_path.name}_{self.last_profile}.zip"
-        output_zip_path = str(project_path.parent / zip_name)
+        output_zip_path = str(output_folder_path / zip_name)
 
-        filtered_results = self.last_results
+        filtered_results = []
         skipped_large_files = []
 
-        if max_size_bytes is not None:
-            filtered_results = []
-            skipped_large_files = []
+        for r in self.last_results:
+            classification = r["classification"]
 
-            for r in self.last_results:
+            if classification not in allowed:
+                filtered_results.append(r)
+                continue
+
+            if max_size_bytes is None:
+                filtered_results.append(r)
+                continue
+
+            if size_review_only:
+                if classification == "include":
+                    filtered_results.append(r)
+                elif classification == "review":
+                    if r["size_bytes"] <= max_size_bytes:
+                        filtered_results.append(r)
+                    else:
+                        skipped_large_files.append(r)
+            else:
                 if r["size_bytes"] <= max_size_bytes:
                     filtered_results.append(r)
                 else:
@@ -217,7 +269,9 @@ class CodePackAIWindow:
             "",
             f"Include review files: {'Yes' if include_review else 'No'}",
             f"Max file size filter: {max_size_kb + ' KB' if max_size_kb else 'None'}",
+            f"Apply size limit only to review files: {'Yes' if size_review_only else 'No'}",
             "",
+            f"Output folder: {output_folder_path}",
             f"Zip path: {output_zip_path}",
             f"Files added: {files_added}",
             f"Total uncompressed bytes: {total_bytes}",
