@@ -5,6 +5,7 @@ from pathlib import Path
 from profile_service import get_all_profiles, get_rules_for_profile
 from scanner import scan_project, summarize_results
 from packer import create_zip_from_results
+from ui.profile_manager_window import ProfileManagerWindow
 
 
 class CodePackAIWindow:
@@ -26,7 +27,6 @@ class CodePackAIWindow:
 
         self._build_ui()
         self._load_profiles()
-
 
     def _build_ui(self) -> None:
         main_frame = ttk.Frame(self.root, padding=12)
@@ -55,6 +55,13 @@ class CodePackAIWindow:
 
         self.profile_combo = ttk.Combobox(main_frame, textvariable=self.profile_var, state="readonly")
         self.profile_combo.grid(row=5, column=0, sticky="ew", padx=(0, 8))
+
+        manage_profiles_button = ttk.Button(
+            main_frame,
+            text="Manage Profiles",
+            command=self._open_profile_manager
+        )
+        manage_profiles_button.grid(row=5, column=1, sticky="ew", pady=(0, 6))
 
         include_review_check = ttk.Checkbutton(
             main_frame,
@@ -95,14 +102,22 @@ class CodePackAIWindow:
         main_frame.columnconfigure(0, weight=1)
         main_frame.rowconfigure(12, weight=1)
 
-
     def _load_profiles(self) -> None:
         profiles = get_all_profiles()
         profile_names = [profile[1] for profile in profiles]
         self.profile_combo["values"] = profile_names
 
         if profile_names:
-            self.profile_var.set("Python" if "Python" in profile_names else profile_names[0])
+            current_value = self.profile_var.get().strip()
+            if current_value in profile_names:
+                self.profile_var.set(current_value)
+            else:
+                self.profile_var.set("Python" if "Python" in profile_names else profile_names[0])
+
+    def _open_profile_manager(self) -> None:
+        manager = ProfileManagerWindow(self.root)
+        self.root.wait_window(manager.window)
+        self._load_profiles()
 
     def _browse_project_folder(self) -> None:
         initial_dir = self.project_folder_var.get().strip() or str(Path.home())
