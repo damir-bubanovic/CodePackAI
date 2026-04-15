@@ -2,7 +2,7 @@ import json
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
-from profile_service import (
+from services.profile_service import (
     get_all_profiles,
     get_profile_by_id,
     get_rules_for_profile_id,

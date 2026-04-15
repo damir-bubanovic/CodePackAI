@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import filedialog, ttk, messagebox
 from pathlib import Path
 
-from profile_service import get_all_profiles, get_rules_for_profile
+from services.profile_service import get_all_profiles, get_rules_for_profile
 from scanner import scan_project, summarize_results
 from packer import create_zip_from_results
 from ui.profile_manager_window import ProfileManagerWindow
