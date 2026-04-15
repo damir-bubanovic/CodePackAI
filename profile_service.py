@@ -128,6 +128,25 @@ def create_rule(
         return cursor.lastrowid
 
 
+def update_rule(
+    rule_id: int,
+    rule_type: str,
+    target_type: str,
+    pattern: str,
+    enabled: int,
+    priority: int,
+    notes: str | None = None,
+) -> None:
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            UPDATE rules
+            SET rule_type = ?, target_type = ?, pattern = ?, enabled = ?, priority = ?, notes = ?
+            WHERE id = ?
+        """, (rule_type, target_type, pattern, enabled, priority, notes, rule_id))
+        conn.commit()
+
+
 def delete_rule(rule_id: int) -> None:
     with get_connection() as conn:
         cursor = conn.cursor()
@@ -174,3 +193,47 @@ def duplicate_profile(source_profile_id: int, new_name: str, new_description: st
 
         conn.commit()
         return new_profile_id
+
+
+
+def import_rules_to_profile(
+    profile_id: int,
+    rules: list[dict],
+    replace_existing: bool = False,
+) -> int:
+    if replace_existing:
+        delete_rules_for_profile(profile_id)
+
+    return create_rules_bulk(profile_id, rules)
+
+
+def delete_rules_for_profile(profile_id: int) -> None:
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM rules WHERE profile_id = ?", (profile_id,))
+        conn.commit()
+
+
+def create_rules_bulk(profile_id: int, rules: list[dict]) -> int:
+    with get_connection() as conn:
+        cursor = conn.cursor()
+
+        rows_to_insert = []
+        for rule in rules:
+            rows_to_insert.append((
+                profile_id,
+                rule["rule_type"],
+                rule["target_type"],
+                rule["pattern"],
+                rule.get("enabled", 1),
+                rule.get("priority", 100),
+                rule.get("notes"),
+            ))
+
+        cursor.executemany("""
+            INSERT INTO rules (profile_id, rule_type, target_type, pattern, enabled, priority, notes)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, rows_to_insert)
+
+        conn.commit()
+        return len(rows_to_insert)

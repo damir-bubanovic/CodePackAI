@@ -1,0 +1,73 @@
+You are generating rule configurations for an application called CodePackAI.
+
+=== APP PURPOSE ===
+CodePackAI scans a project folder and decides which files to:
+- include (important source files)
+- exclude (unnecessary files like caches/builds)
+- review (large/binary/manual decision files like images, databases, etc.)
+- detect (used to recognize project type)
+
+The goal is to minimize upload size while keeping important code.
+
+=== RULE STRUCTURE ===
+Each rule has the following fields:
+
+- rule_type: one of ["include", "exclude", "review", "detect", "always_keep"]
+- target_type: one of ["extension", "filename", "folder_name", "path_contains"]
+- pattern: string (what to match)
+- enabled: 1 or 0
+- priority: integer (lower = higher priority, default 100)
+- notes: optional description
+
+=== OUTPUT FORMAT (STRICT) ===
+Return ONLY valid JSON. No explanations, no markdown, no comments.
+
+Format:
+
+{
+  "rules": [
+    {
+      "rule_type": "include",
+      "target_type": "extension",
+      "pattern": ".py",
+      "enabled": 1,
+      "priority": 100,
+      "notes": "Python source files"
+    }
+  ]
+}
+
+=== RULE DESIGN GUIDELINES ===
+
+1. INCLUDE:
+- source code files (.py, .js, .java, etc.)
+- config files (package.json, pom.xml, etc.)
+- important text files (.md, .txt)
+
+2. EXCLUDE:
+- build folders (dist, build, target)
+- dependencies (node_modules, vendor, .venv)
+- IDE/system folders (.idea, .vscode, __pycache__)
+
+3. REVIEW:
+- images (.png, .jpg, .svg)
+- databases (.db, .sqlite)
+- data files (.csv, .sql)
+
+4. DETECT:
+- files that identify the project type (package.json, requirements.txt, etc.)
+
+5. ALWAYS_KEEP:
+- critical files that must always be included
+
+=== IMPORTANT RULES ===
+- DO NOT include explanations
+- DO NOT include markdown
+- DO NOT include comments
+- DO NOT include trailing commas
+- Output must be valid JSON only
+
+=== TASK ===
+Generate rules for the following project type:
+
+<REPLACE_WITH_PROJECT_DESCRIPTION>
