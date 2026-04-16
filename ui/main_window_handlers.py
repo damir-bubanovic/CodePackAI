@@ -38,12 +38,16 @@ class MainWindowHandlers:
         profile_names = [profile[1] for profile in profiles]
         self.window.profile_combo["values"] = profile_names
 
-        if profile_names:
-            current_value = self.window.profile_var.get().strip()
-            if current_value in profile_names:
-                self.window.profile_var.set(current_value)
-            else:
-                self.window.profile_var.set("Python" if "Python" in profile_names else profile_names[0])
+        if not profile_names:
+            self.window.profile_var.set("")
+            self.window.profile_combo.set("No profiles available")
+            return
+
+        current_value = self.window.profile_var.get().strip()
+        if current_value in profile_names:
+            self.window.profile_var.set(current_value)
+        else:
+            self.window.profile_var.set(profile_names[0])
 
     def open_profile_manager(self) -> None:
         manager = ProfileManagerWindow(self.window.root)
@@ -51,6 +55,14 @@ class MainWindowHandlers:
         self.refresh_profiles()
 
     def run_scan(self) -> None:
+        if not self.window.profiles:
+            messagebox.showerror(
+                "No Profiles",
+                "No profiles found.\n\nPlease create a profile in 'Manage Profiles' before scanning.",
+                parent=self.window.root
+            )
+            return
+
         project_folder = self.window.project_folder_var.get().strip()
         profile_name = self.window.profile_var.get().strip()
 
@@ -115,6 +127,14 @@ class MainWindowHandlers:
         self.window.write_result("\n".join(result_lines))
 
     def pack(self) -> None:
+        if not self.window.profiles:
+            messagebox.showerror(
+                "No Profiles",
+                "No profiles found.\n\nPlease create a profile first.",
+                parent=self.window.root
+            )
+            return
+
         if not self.window.last_results:
             messagebox.showerror("Error", "Run scan first.", parent=self.window.root)
             return

@@ -62,7 +62,7 @@ class ProfileManagerWindow:
         self.refresh_button = ttk.Button(
             button_frame,
             text="Refresh",
-            command=self._load_profiles
+            command=self.refresh_profiles
         )
         self.refresh_button.grid(row=0, column=2, sticky="ew", padx=(0, 6))
 
@@ -239,3 +239,9 @@ class ProfileManagerWindow:
     def refresh_selected_profile_details(self) -> None:
         if self.selected_profile_id is not None:
             self._show_profile_details(self.selected_profile_id)
+
+    def refresh_profiles(self) -> None:
+        self._load_profiles()
+
+    def clear_rules_table(self) -> None:
+        self._clear_rules_table()

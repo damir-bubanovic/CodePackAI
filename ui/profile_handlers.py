@@ -40,13 +40,14 @@ class ProfileHandlers:
                 return
 
             try:
-                create_profile(name=name, description=description, is_builtin=0)
+                new_profile_id = create_profile(name=name, description=description, is_builtin=0)
             except Exception as e:
                 messagebox.showerror("Error", f"Could not create profile:\n{e}", parent=dialog)
                 return
 
             dialog.destroy()
             self.window.refresh_profiles()
+            self.reselect_profile(new_profile_id)
 
         ttk.Button(dialog, text="Save", command=save_profile).pack(pady=16)
         name_entry.focus_set()
