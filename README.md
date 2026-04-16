@@ -4,7 +4,7 @@
 
 ---
 
-# CodePackAI
+## <img src="images/logo.png" width="24"> CodePackAI
 
 CodePackAI is a desktop application that scans a codebase and packages it into a clean, structured ZIP file optimized for AI analysis.
 
